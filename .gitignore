@@ -1,0 +1,12 @@
+# Node
+node_modules/
+
+# dotenv
+.env
+
+# build
+dist/
+
+# logs
+logs/
+.DS_Store
