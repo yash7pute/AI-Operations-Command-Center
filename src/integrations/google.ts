@@ -1,33 +1,28 @@
 import { google } from 'googleapis';
-import { Logger } from 'winston';
 import logger from '../utils/logger';
 
-export function createGoogleClients() {
-  // Placeholder for Google API clients (Sheets, Drive, Gmail)
-  const sheets = google.sheets({ version: 'v4' });
-  const drive = google.drive({ version: 'v3' });
-
-  logger.info('Google clients placeholder created');
-  return { sheets, drive };
-}
-import { google } from 'googleapis';
-
 export class GoogleIntegration {
-    private oauth2Client;
+    private oauth2Client: any;
 
-    constructor(clientId: string, clientSecret: string, redirectUri: string) {
+    constructor(private clientId: string, private clientSecret: string, private redirectUri: string) {
         this.oauth2Client = new google.auth.OAuth2(clientId, clientSecret, redirectUri);
     }
 
     async authenticate(code: string) {
-        const { tokens } = await this.oauth2Client.getToken(code);
-        this.oauth2Client.setCredentials(tokens);
-        return tokens;
+        try {
+            const { tokens } = await this.oauth2Client.getToken(code);
+            this.oauth2Client.setCredentials(tokens);
+            logger.info('GoogleIntegration authenticated');
+            return tokens;
+        } catch (err) {
+            logger.error('GoogleIntegration authenticate failed', err instanceof Error ? err.message : String(err));
+            throw err;
+        }
     }
 
     async makeApiRequest(api: string, method: string, params: any) {
-        const apiClient = google[api]();
-        const response = await apiClient[method](params);
+        const apiClient: any = (google as any)[api]({ version: 'v3', auth: this.oauth2Client });
+        const response = await apiClient[method](params as any);
         return response.data;
     }
 }

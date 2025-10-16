@@ -1,44 +1,33 @@
-import { App, ExpressReceiver } from '@slack/bolt';
-import { logger } from '../utils/logger';
-
-export function createSlackApp() {
-  // This is a minimal placeholder. Configure with env vars when ready.
-  const app = new App({
-    token: process.env.SLACK_BOT_TOKEN,
-    signingSecret: process.env.SLACK_SIGNING_SECRET,
-    socketMode: !!process.env.SLACK_APP_TOKEN,
-    appToken: process.env.SLACK_APP_TOKEN,
-  });
-
-  logger.info('Slack app placeholder created');
-  return app;
-}
 import { App, LogLevel } from '@slack/bolt';
+import logger from '../utils/logger';
 
 export class SlackIntegration {
-    private app: App;
+    private app: App | null = null;
 
-    constructor(signingSecret: string, botToken: string) {
-        this.app = new App({
-            signingSecret: signingSecret,
-            token: botToken,
-            logLevel: LogLevel.DEBUG,
-        });
+    constructor(private signingSecret: string, private botToken: string) {}
+
+    async initialize() {
+        try {
+            this.app = new App({
+                signingSecret: this.signingSecret,
+                token: this.botToken,
+                logLevel: LogLevel.INFO,
+            });
+            logger.info('SlackIntegration initialized');
+        } catch (err) {
+            logger.error('Failed to initialize SlackIntegration', err instanceof Error ? err.message : String(err));
+            throw err;
+        }
     }
 
     async sendMessage(channel: string, text: string): Promise<void> {
-        await this.app.client.chat.postMessage({
-            channel: channel,
-            text: text,
-        });
-    }
-
-    async handleEvent(eventType: string, callback: (event: any) => void): Promise<void> {
-        this.app.event(eventType, callback);
+        if (!this.app) throw new Error('SlackIntegration not initialized');
+        await this.app.client.chat.postMessage({ channel, text });
     }
 
     async start(port: number): Promise<void> {
+        if (!this.app) throw new Error('SlackIntegration not initialized');
         await this.app.start(port);
-        console.log(`Slack app is running on port ${port}`);
+        logger.info(`Slack app is running on port ${port}`);
     }
 }

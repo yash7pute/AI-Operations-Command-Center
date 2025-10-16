@@ -1,33 +1,39 @@
+import fs from 'fs';
+import path from 'path';
 import winston from 'winston';
 
-const level = process.env.LOG_LEVEL || 'info';
+const logsDir = path.resolve(process.cwd(), 'logs');
+if (!fs.existsSync(logsDir)) {
+  fs.mkdirSync(logsDir, { recursive: true });
+}
 
-const logger = winston.createLogger({
-  level,
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.printf(({ timestamp, level, message, ...meta }) => {
-      const rest = Object.keys(meta).length ? JSON.stringify(meta) : '';
-      return `${timestamp} [${level}] ${message} ${rest}`;
-    })
-  ),
-  transports: [new winston.transports.Console()],
+const { combine, timestamp, printf, colorize } = winston.format;
+
+const isoTimestamp = timestamp({ format: () => new Date().toISOString() });
+
+const fileFormat = printf(({ timestamp, level, message, ...meta }) => {
+  const rest = Object.keys(meta).length ? JSON.stringify(meta) : '';
+  return `${timestamp} [${level}] ${message} ${rest}`;
 });
 
-export default logger;
-import winston from 'winston';
+const consoleFormat = combine(
+  colorize({ all: true }),
+  isoTimestamp,
+  printf(({ timestamp, level, message, ...meta }) => {
+    const rest = Object.keys(meta).length ? JSON.stringify(meta) : '';
+    return `${timestamp} [${level}] ${message} ${rest}`;
+  })
+);
 
 const logger = winston.createLogger({
-    level: 'info',
-    format: winston.format.combine(
-        winston.format.timestamp(),
-        winston.format.json()
-    ),
-    transports: [
-        new winston.transports.Console(),
-        new winston.transports.File({ filename: 'logs/error.log', level: 'error' }),
-        new winston.transports.File({ filename: 'logs/combined.log' })
-    ],
+  level: process.env.LOG_LEVEL || 'info',
+  transports: [
+    new winston.transports.File({ filename: path.join(logsDir, 'error.log'), level: 'error', format: combine(isoTimestamp, fileFormat) }),
+    new winston.transports.File({ filename: path.join(logsDir, 'combined.log'), format: combine(isoTimestamp, fileFormat) }),
+  ],
 });
+
+// Add console transport with colorized levels
+logger.add(new winston.transports.Console({ format: consoleFormat }));
 
 export default logger;
