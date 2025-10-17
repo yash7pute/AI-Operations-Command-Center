@@ -1,4 +1,15 @@
 import winston from 'winston';
+import fs from 'fs';
+import path from 'path';
+
+const LOG_DIR = path.resolve(process.cwd(), 'logs');
+try {
+  if (!fs.existsSync(LOG_DIR)) {
+    fs.mkdirSync(LOG_DIR, { recursive: true });
+  }
+} catch (e) {
+  // ignore
+}
 
 const level = process.env.LOG_LEVEL || 'info';
 
@@ -6,28 +17,13 @@ const logger = winston.createLogger({
   level,
   format: winston.format.combine(
     winston.format.timestamp(),
-    winston.format.printf(({ timestamp, level, message, ...meta }) => {
-      const rest = Object.keys(meta).length ? JSON.stringify(meta) : '';
-      return `${timestamp} [${level}] ${message} ${rest}`;
-    })
+    winston.format.json()
   ),
-  transports: [new winston.transports.Console()],
-});
-
-export default logger;
-import winston from 'winston';
-
-const logger = winston.createLogger({
-    level: 'info',
-    format: winston.format.combine(
-        winston.format.timestamp(),
-        winston.format.json()
-    ),
-    transports: [
-        new winston.transports.Console(),
-        new winston.transports.File({ filename: 'logs/error.log', level: 'error' }),
-        new winston.transports.File({ filename: 'logs/combined.log' })
-    ],
+  transports: [
+    new winston.transports.Console(),
+    new winston.transports.File({ filename: path.join(LOG_DIR, 'error.log'), level: 'error' }),
+    new winston.transports.File({ filename: path.join(LOG_DIR, 'combined.log') })
+  ],
 });
 
 export default logger;

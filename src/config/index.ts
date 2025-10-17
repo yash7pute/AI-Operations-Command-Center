@@ -18,14 +18,28 @@ export const config = {
   SLACK_BOT_TOKEN: process.env.SLACK_BOT_TOKEN || '',
   SLACK_SIGNING_SECRET: process.env.SLACK_SIGNING_SECRET || '',
   SLACK_APP_TOKEN: process.env.SLACK_APP_TOKEN || '',
+  SLACK_NOTIFICATIONS_CHANNEL: process.env.SLACK_NOTIFICATIONS_CHANNEL || '',
 
   GOOGLE_SHEETS_API_KEY: process.env.GOOGLE_SHEETS_API_KEY || '',
   GOOGLE_DRIVE_API_KEY: process.env.GOOGLE_DRIVE_API_KEY || '',
+  GOOGLE_DRIVE_ROOT_FOLDER_ID: process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID || '',
+  GOOGLE_SERVICE_ACCOUNT_EMAIL: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || '',
+  GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY: process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY || '',
+  SHEETS_LOG_SPREADSHEET_ID: process.env.SHEETS_LOG_SPREADSHEET_ID || '',
 
   NOTION_API_KEY: process.env.NOTION_API_KEY || '',
+  NOTION_DATABASE_ID: process.env.NOTION_DATABASE_ID || '',
 
   TRELLO_API_KEY: process.env.TRELLO_API_KEY || '',
   TRELLO_TOKEN: process.env.TRELLO_TOKEN || '',
+  TRELLO_DEFAULT_LIST_ID: process.env.TRELLO_DEFAULT_LIST_ID || '',
+  TRELLO_BOARD_ID: process.env.TRELLO_BOARD_ID || '',
+  
+  // Trello workflow lists
+  TRELLO_BACKLOG_LIST: process.env.TRELLO_BACKLOG_LIST || '',
+  TRELLO_TODO_LIST: process.env.TRELLO_TODO_LIST || '',
+  TRELLO_IN_PROGRESS_LIST: process.env.TRELLO_IN_PROGRESS_LIST || '',
+  TRELLO_DONE_LIST: process.env.TRELLO_DONE_LIST || '',
 
   COMPOSIO_API_KEY: process.env.COMPOSIO_API_KEY || '',
   LLM_API_KEY: process.env.LLM_API_KEY || '',
@@ -52,4 +66,8 @@ export function validateConfig() {
   }
 
   logger.info('Environment configuration validated');
+}
+
+export function getConfig() {
+  return config;
 }

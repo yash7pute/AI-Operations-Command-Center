@@ -1,13 +1,6 @@
 import { Client } from '@notionhq/client';
 import logger from '../utils/logger';
 
-export function createNotionClient() {
-  const client = new Client({ auth: process.env.NOTION_API_KEY });
-  logger.info('Notion client placeholder created');
-  return client;
-}
-import { Client } from '@notionhq/client';
-
 export class NotionIntegration {
     private notion: Client;
 
@@ -29,5 +22,11 @@ export class NotionIntegration {
             properties: properties,
         });
         return response;
+    }
+
+    static createClientFromEnv() {
+        const client = new Client({ auth: process.env.NOTION_API_KEY });
+        logger.info('Notion client created from env');
+        return client;
     }
 }
