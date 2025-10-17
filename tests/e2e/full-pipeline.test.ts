@@ -10,14 +10,33 @@ jest.mock('../../src/utils/logger');
  */
 
 describe('E2E full pipeline (Gmail -> EventHub -> Member processing)', () => {
+  let hub: any;
+  let retryQueue: any;
+  
   beforeEach(() => {
     jest.resetModules();
   });
 
+  afterEach(async () => {
+    // Clean up any active timers/intervals from EventHub and RetryQueue
+    if (hub && hub.cleanup) {
+      await hub.cleanup();
+    }
+    if (retryQueue) {
+      try { 
+        retryQueue.stop(); 
+        // Clear any pending items
+        if (retryQueue.clear) retryQueue.clear();
+      } catch (e) {}
+    }
+    jest.clearAllTimers();
+    jest.clearAllMocks();
+  });
+
   test('Gmail -> EventHub -> downstream integrations, error recovery, latency and trace', async () => {
     // We'll load the event hub and register subscribers to simulate real integration handlers
-    const hub = require('../../src/integrations/event-hub').default;
-    const retryQueue = require('../../src/utils/retry-queue').default;
+    hub = require('../../src/integrations/event-hub').default;
+    retryQueue = require('../../src/utils/retry-queue').default;
 
     // Stop retryQueue background timer to control processing
     try { retryQueue.stop(); } catch (e) {}
@@ -100,8 +119,9 @@ describe('E2E full pipeline (Gmail -> EventHub -> Member processing)', () => {
     // Emit event through hub (this will enqueue+process synchronously)
     const emitted = await hub.emitEvent({ source: 'gmail', type: 'message.received', data: gmailPayload, metadata: { raw: true }, priority: 'normal' });
 
-    // Wait a tick for processing to finish (EventHub processes async)
-    await new Promise((r) => setTimeout(r, 200));
+    // Wait for async processing to complete
+    await new Promise((r) => setImmediate(r));
+    await new Promise((r) => setImmediate(r));
 
     const endTs = Date.now();
     const latencyMs = endTs - startTs;
@@ -125,14 +145,12 @@ describe('E2E full pipeline (Gmail -> EventHub -> Member processing)', () => {
     trace.push({ level: 'info', msg: 'e2e_latency', meta: { latencyMs } });
     expect(latencyMs).toBeLessThan(5000);
 
-  // Ensure EventHub recorded the emitted event in its history
-  const history = hub.getEventHistory('gmail', 10);
-  const found = history.find((h: any) => h.type === 'message.received' && h.data && h.data.id === gmailPayload.id);
-  expect(found).toBeDefined();
+    // Ensure EventHub recorded the emitted event in its history
+    const history = hub.getEventHistory('gmail', 10);
+    const found = history.find((h: any) => h.type === 'message.received' && h.data && h.data.id === gmailPayload.id);
+    expect(found).toBeDefined();
 
-    // cleanup
+    // cleanup subscriber
     unsubscribe();
-    // Ensure retryQueue resumed background timer if necessary
-    try { retryQueue.start && retryQueue.start(); } catch (e) {}
   }, 20000);
 });

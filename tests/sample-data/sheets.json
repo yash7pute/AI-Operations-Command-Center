@@ -1,0 +1,328 @@
+{
+  "spreadsheetId": "sample-spreadsheet-123",
+  "spreadsheetTitle": "Operations Dashboard",
+  "sheets": [
+    {
+      "sheetId": 0,
+      "title": "Tasks",
+      "data": {
+        "range": "Tasks!A1:F20",
+        "values": [
+          [
+            "Task ID",
+            "Title",
+            "Assignee",
+            "Status",
+            "Priority",
+            "Due Date"
+          ],
+          [
+            "T-001",
+            "Fix payment API bug",
+            "Alice Johnson",
+            "In Progress",
+            "High",
+            "2025-10-18"
+          ],
+          [
+            "T-002",
+            "Design dashboard mockups",
+            "Grace Martinez",
+            "Complete",
+            "Medium",
+            "2025-10-15"
+          ],
+          [
+            "T-003",
+            "Implement SSO with Okta",
+            "Bob Smith",
+            "Not Started",
+            "High",
+            "2025-11-01"
+          ],
+          [
+            "T-004",
+            "Database performance optimization",
+            "David Kim",
+            "In Progress",
+            "Medium",
+            "2025-10-20"
+          ],
+          [
+            "T-005",
+            "Update GDPR compliance docs",
+            "Carol Lee",
+            "In Review",
+            "High",
+            "2025-10-22"
+          ],
+          [
+            "T-006",
+            "Add retry logic to email service",
+            "Frank Wilson",
+            "Complete",
+            "Low",
+            "2025-10-12"
+          ],
+          [
+            "T-007",
+            "Onboard new hire Sarah Chen",
+            "Emma Davis",
+            "In Progress",
+            "Medium",
+            "2025-10-21"
+          ],
+          [
+            "T-008",
+            "Upgrade PostgreSQL to v15",
+            "Henry Zhang",
+            "Planned",
+            "Medium",
+            "2025-10-20"
+          ],
+          [
+            "T-009",
+            "Fix Safari login bug",
+            "Alice Johnson",
+            "In Progress",
+            "Medium",
+            "2025-10-19"
+          ],
+          [
+            "T-010",
+            "Security audit Q4",
+            "Henry Zhang",
+            "Not Started",
+            "High",
+            "2025-11-15"
+          ]
+        ]
+      }
+    },
+    {
+      "sheetId": 1,
+      "title": "Metrics",
+      "data": {
+        "range": "Metrics!A1:E10",
+        "values": [
+          [
+            "Date",
+            "API Requests",
+            "Error Rate %",
+            "Avg Response Time (ms)",
+            "Active Users"
+          ],
+          [
+            "2025-10-10",
+            "125000",
+            "0.2",
+            "145",
+            "8450"
+          ],
+          [
+            "2025-10-11",
+            "132000",
+            "0.3",
+            "152",
+            "8620"
+          ],
+          [
+            "2025-10-12",
+            "128000",
+            "0.1",
+            "138",
+            "8390"
+          ],
+          [
+            "2025-10-13",
+            "145000",
+            "0.4",
+            "168",
+            "9120"
+          ],
+          [
+            "2025-10-14",
+            "138000",
+            "0.2",
+            "155",
+            "8890"
+          ],
+          [
+            "2025-10-15",
+            "142000",
+            "0.3",
+            "162",
+            "9050"
+          ],
+          [
+            "2025-10-16",
+            "151000",
+            "0.5",
+            "198",
+            "9340"
+          ],
+          [
+            "2025-10-17",
+            "148000",
+            "0.2",
+            "149",
+            "9180"
+          ]
+        ]
+      }
+    },
+    {
+      "sheetId": 2,
+      "title": "Incidents",
+      "data": {
+        "range": "Incidents!A1:G15",
+        "values": [
+          [
+            "Incident ID",
+            "Date",
+            "Severity",
+            "Service",
+            "Description",
+            "Status",
+            "Resolution Time (hrs)"
+          ],
+          [
+            "INC-001",
+            "2025-10-15",
+            "Critical",
+            "Payment API",
+            "API returning 500 errors",
+            "Resolved",
+            "2.5"
+          ],
+          [
+            "INC-002",
+            "2025-10-14",
+            "High",
+            "Auth Service",
+            "Login failures on Safari",
+            "In Progress",
+            "-"
+          ],
+          [
+            "INC-003",
+            "2025-10-12",
+            "Medium",
+            "Email Service",
+            "Delivery delays",
+            "Resolved",
+            "4.0"
+          ],
+          [
+            "INC-004",
+            "2025-10-11",
+            "Low",
+            "Monitoring",
+            "False positive alerts",
+            "Resolved",
+            "1.0"
+          ],
+          [
+            "INC-005",
+            "2025-10-17",
+            "High",
+            "Database",
+            "Connection pool exhausted",
+            "Resolved",
+            "0.5"
+          ],
+          [
+            "INC-006",
+            "2025-10-16",
+            "Medium",
+            "API Gateway",
+            "Rate limit exceeded",
+            "Resolved",
+            "1.5"
+          ],
+          [
+            "INC-007",
+            "2025-10-13",
+            "Critical",
+            "Backup Service",
+            "Backup failed - disk full",
+            "Resolved",
+            "3.0"
+          ]
+        ]
+      }
+    },
+    {
+      "sheetId": 3,
+      "title": "Customer Feedback",
+      "data": {
+        "range": "Customer Feedback!A1:E12",
+        "values": [
+          [
+            "Date",
+            "Customer",
+            "Rating",
+            "Category",
+            "Feedback"
+          ],
+          [
+            "2025-10-17",
+            "Acme Corp",
+            "5",
+            "Feature",
+            "Export feature is amazing! Saves us 20hrs/week"
+          ],
+          [
+            "2025-10-16",
+            "TechStart Inc",
+            "4",
+            "Performance",
+            "Dashboard loads fast now, much better!"
+          ],
+          [
+            "2025-10-15",
+            "Global LLC",
+            "2",
+            "Bug",
+            "Safari login still broken, frustrating"
+          ],
+          [
+            "2025-10-14",
+            "DataCo",
+            "5",
+            "Support",
+            "Support team resolved our issue in 30 minutes"
+          ],
+          [
+            "2025-10-13",
+            "CloudNet",
+            "3",
+            "Feature",
+            "Need SSO integration for enterprise deployment"
+          ],
+          [
+            "2025-10-12",
+            "StartupXYZ",
+            "5",
+            "UX",
+            "New UI design is clean and intuitive"
+          ],
+          [
+            "2025-10-11",
+            "FinanceHub",
+            "4",
+            "API",
+            "API documentation could be more detailed"
+          ],
+          [
+            "2025-10-10",
+            "DevShop",
+            "5",
+            "Integration",
+            "Slack integration works perfectly"
+          ]
+        ]
+      }
+    }
+  ]
+}
