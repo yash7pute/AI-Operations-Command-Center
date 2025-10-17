@@ -1,0 +1,648 @@
+/**
+ * Composio Client - Real Integration Layer
+ * 
+ * Initializes and manages Composio connections for:
+ * - Gmail monitoring and sending
+ * - Slack monitoring and posting
+ * - Notion database operations
+ * 
+ * This replaces mock data with real API calls.
+ */
+
+import { Composio } from 'composio-core';
+import Groq from 'groq-sdk';
+import logger from '../utils/logger';
+import { config } from '../config';
+import { agentConfig, extractDueDate, detectCategory, calculateUrgency, calculateImportance } from '../config/agent-config';
+import eventHub from './event-hub';
+import type { Signal } from '../agents/reasoning/context-builder';
+
+// ============================================================================
+// Types
+// ============================================================================
+
+interface ExtractedTask {
+  title: string;
+  description: string;
+  dueDate: Date | null;
+  priority: 'critical' | 'high' | 'medium' | 'low';
+  category: string;
+  source: 'gmail' | 'slack';
+  sourceLink: string;
+  rawContent: string;
+  confidence: number;
+}
+
+interface ComposioConfig {
+  apiKey: string;
+  groqApiKey: string;
+  notionDatabaseId?: string;
+}
+
+// ============================================================================
+// Composio Client Class
+// ============================================================================
+
+class ComposioClient {
+  private composio: Composio | null = null;
+  private groq: Groq | null = null;
+  private initialized = false;
+  private monitoringInterval: NodeJS.Timeout | null = null;
+  private lastGmailCheck: Date | null = null;
+  private lastSlackCheck: Date | null = null;
+
+  /**
+   * Initialize Composio and Groq clients
+   */
+  async initialize(config: ComposioConfig): Promise<void> {
+    try {
+      logger.info('Initializing Composio client...');
+
+      // Initialize Composio
+      this.composio = new Composio({
+        apiKey: config.apiKey,
+      });
+
+      // Initialize Groq
+      this.groq = new Groq({
+        apiKey: config.groqApiKey,
+      });
+
+      // Verify connections
+      await this.verifyConnections();
+
+      this.initialized = true;
+      logger.info('✅ Composio client initialized successfully');
+    } catch (error) {
+      logger.error('Failed to initialize Composio client', { error });
+      throw error;
+    }
+  }
+
+  /**
+   * Verify that integrations are connected
+   */
+  private async verifyConnections(): Promise<void> {
+    try {
+      if (!this.composio) throw new Error('Composio not initialized');
+
+      logger.info('✅ Composio SDK initialized');
+      logger.warn('⚠️  Connection verification requires CLI setup:');
+      logger.warn('   Run: composio login');
+      logger.warn('   Run: composio add gmail');
+      logger.warn('   Run: composio add slack');
+      logger.warn('   Run: composio add notion');
+      
+      // Note: The actual connection check requires Composio CLI to be set up
+      // Users should run `composio apps` to verify connections
+    } catch (error) {
+      logger.error('Failed to verify connections', { error });
+    }
+  }
+
+  /**
+   * Start monitoring Gmail and Slack for new signals
+   */
+  async startMonitoring(): Promise<void> {
+    if (!this.initialized) {
+      throw new Error('Composio client not initialized');
+    }
+
+    logger.info('Starting real-time monitoring...');
+
+    // Initial check
+    await this.checkGmail();
+    await this.checkSlack();
+
+    // Set up periodic monitoring
+    this.monitoringInterval = setInterval(async () => {
+      try {
+        await this.checkGmail();
+        await this.checkSlack();
+      } catch (error) {
+        logger.error('Monitoring error', { error });
+      }
+    }, Math.min(agentConfig.gmail.pollInterval, agentConfig.slack.pollInterval));
+
+    logger.info('✅ Monitoring started');
+  }
+
+  /**
+   * Stop monitoring
+   */
+  stopMonitoring(): void {
+    if (this.monitoringInterval) {
+      clearInterval(this.monitoringInterval);
+      this.monitoringInterval = null;
+      logger.info('Monitoring stopped');
+    }
+  }
+
+  /**
+   * Check Gmail for new emails
+   */
+  private async checkGmail(): Promise<void> {
+    if (!this.composio || !this.groq) return;
+
+    try {
+      logger.debug('Checking Gmail...');
+
+      // Use Composio to fetch recent emails
+      const action = await this.composio.executeAction({
+        action: 'GMAIL_LIST_MESSAGES',
+        params: {
+          maxResults: agentConfig.gmail.maxEmailsPerPoll,
+          q: agentConfig.gmail.unreadOnly ? 'is:unread' : '',
+          labelIds: agentConfig.gmail.monitorLabels,
+        },
+      });
+
+      if (!action || !action.response || !action.response.data) {
+        logger.debug('No new Gmail messages');
+        return;
+      }
+
+      const messages = action.response.data.messages || [];
+      logger.info(`Found ${messages.length} Gmail messages`);
+
+      // Process each email
+      for (const message of messages) {
+        try {
+          await this.processGmailMessage(message.id);
+        } catch (error) {
+          logger.error('Failed to process Gmail message', { messageId: message.id, error });
+        }
+      }
+
+      this.lastGmailCheck = new Date();
+    } catch (error) {
+      logger.error('Gmail check failed', { error });
+    }
+  }
+
+  /**
+   * Process a single Gmail message
+   */
+  private async processGmailMessage(messageId: string): Promise<void> {
+    if (!this.composio || !this.groq) return;
+
+    try {
+      // Get full message details
+      const action = await this.composio.executeAction({
+        action: 'GMAIL_GET_MESSAGE',
+        params: { id: messageId },
+      });
+
+      if (!action || !action.response || !action.response.data) {
+        return;
+      }
+
+      const message = action.response.data;
+      const headers = message.payload?.headers || [];
+      
+      // Extract headers
+      const subject = headers.find((h: any) => h.name === 'Subject')?.value || 'No Subject';
+      const from = headers.find((h: any) => h.name === 'From')?.value || 'Unknown';
+      const date = headers.find((h: any) => h.name === 'Date')?.value || new Date().toISOString();
+
+      // Extract body
+      let body = '';
+      if (message.payload?.body?.data) {
+        body = Buffer.from(message.payload.body.data, 'base64').toString('utf-8');
+      } else if (message.payload?.parts) {
+        for (const part of message.payload.parts) {
+          if (part.mimeType === 'text/plain' && part.body?.data) {
+            body += Buffer.from(part.body.data, 'base64').toString('utf-8');
+          }
+        }
+      }
+
+      // Create signal
+      const signal: Signal = {
+        id: `gmail_${messageId}`,
+        source: 'email',
+        subject,
+        body: body.substring(0, 5000), // Limit to 5000 chars
+        sender: from,
+        timestamp: new Date(date).toISOString(),
+      };
+
+      logger.info('Processing Gmail signal', { subject, from });
+
+      // Use AI to analyze and extract task
+      const task = await this.extractTask(signal);
+
+      if (task && task.confidence > agentConfig.confidence.reject) {
+        // Publish to event hub
+        await eventHub.emitEvent({
+          source: 'composio-client',
+          type: 'signal:received',
+          data: signal,
+        });
+
+        // Create Notion task if confidence is high enough
+        if (task.confidence > agentConfig.confidence.autoExecute) {
+          await this.createNotionTask(task);
+        } else {
+          // Queue for manual approval
+          await eventHub.emitEvent({
+            source: 'composio-client',
+            type: 'task:requires_approval',
+            data: { task, signal },
+          });
+        }
+      } else {
+        logger.debug('Email does not contain actionable task', { subject });
+      }
+    } catch (error) {
+      logger.error('Failed to process Gmail message', { messageId, error });
+    }
+  }
+
+  /**
+   * Check Slack for new messages
+   */
+  private async checkSlack(): Promise<void> {
+    if (!this.composio || !this.groq) return;
+
+    try {
+      logger.debug('Checking Slack...');
+
+      // Use Composio to fetch recent messages
+      const action = await this.composio.executeAction({
+        action: 'SLACK_LIST_MESSAGES',
+        params: {
+          limit: agentConfig.slack.maxMessagesPerPoll,
+        },
+      });
+
+      if (!action || !action.response || !action.response.data) {
+        logger.debug('No new Slack messages');
+        return;
+      }
+
+      const messages = action.response.data.messages || [];
+      logger.info(`Found ${messages.length} Slack messages`);
+
+      // Process each message
+      for (const message of messages) {
+        try {
+          await this.processSlackMessage(message);
+        } catch (error) {
+          logger.error('Failed to process Slack message', { message, error });
+        }
+      }
+
+      this.lastSlackCheck = new Date();
+    } catch (error) {
+      logger.error('Slack check failed', { error });
+    }
+  }
+
+  /**
+   * Process a single Slack message
+   */
+  private async processSlackMessage(message: any): Promise<void> {
+    if (!this.composio || !this.groq) return;
+
+    try {
+      // Create signal
+      const signal: Signal = {
+        id: `slack_${message.ts}`,
+        source: 'slack',
+        subject: `Slack message from ${message.user}`,
+        body: message.text || '',
+        sender: message.user,
+        timestamp: new Date(parseFloat(message.ts) * 1000).toISOString(),
+      };
+
+      logger.info('Processing Slack signal', { user: message.user, text: message.text?.substring(0, 50) });
+
+      // Use AI to analyze and extract task
+      const task = await this.extractTask(signal);
+
+      if (task && task.confidence > agentConfig.confidence.reject) {
+        // Publish to event hub
+        await eventHub.emitEvent({
+          source: 'composio-client',
+          type: 'signal:received',
+          data: signal,
+        });
+
+        // Create Notion task if confidence is high enough
+        if (task.confidence > agentConfig.confidence.autoExecute) {
+          await this.createNotionTask(task);
+          
+          // Reply to Slack
+          if (agentConfig.slack.replyWithConfirmation) {
+            await this.replyToSlack(message.channel, message.ts, `✅ Task created in Notion: "${task.title}"`);
+          }
+        } else {
+          // Queue for manual approval
+          await eventHub.emitEvent({
+            source: 'composio-client',
+            type: 'task:requires_approval',
+            data: { task, signal },
+          });
+        }
+      } else {
+        logger.debug('Slack message does not contain actionable task');
+      }
+    } catch (error) {
+      logger.error('Failed to process Slack message', { error });
+    }
+  }
+
+  /**
+   * Use Groq AI to extract task from signal
+   */
+  private async extractTask(signal: Signal): Promise<ExtractedTask | null> {
+    if (!this.groq) return null;
+
+    try {
+      const prompt = `Analyze this ${signal.source} message and extract any actionable tasks with deadlines or important dates.
+
+Subject: ${signal.subject || 'N/A'}
+From: ${signal.sender || 'Unknown'}
+Content: ${signal.body}
+
+Extract:
+1. Task title (brief, 50 chars max)
+2. Detailed description
+3. Due date (if mentioned)
+4. Priority (critical/high/medium/low)
+5. Category (meeting/task/project/deadline/general)
+
+Return JSON:
+{
+  "hasTask": true/false,
+  "title": "...",
+  "description": "...",
+  "dueDate": "YYYY-MM-DD" or null,
+  "priority": "...",
+  "category": "...",
+  "confidence": 0.0-1.0
+}`;
+
+      const response = await this.groq.chat.completions.create({
+        model: agentConfig.llm.model,
+        messages: [
+          { role: 'system', content: agentConfig.llm.systemPrompts.extractor },
+          { role: 'user', content: prompt },
+        ],
+        temperature: agentConfig.llm.temperature,
+        max_tokens: agentConfig.llm.maxTokens,
+        response_format: { type: 'json_object' },
+      });
+
+      const result = JSON.parse(response.choices[0].message.content || '{}');
+
+      if (!result.hasTask) {
+        return null;
+      }
+
+      // Parse due date
+      let dueDate: Date | null = null;
+      if (result.dueDate) {
+        dueDate = new Date(result.dueDate);
+      } else {
+        // Fallback to regex extraction
+        dueDate = extractDueDate(signal.body);
+      }
+
+      const task: ExtractedTask = {
+        title: result.title || signal.subject || 'Untitled Task',
+        description: result.description || signal.body.substring(0, 500),
+        dueDate,
+        priority: result.priority || calculateUrgency(signal),
+        category: result.category || detectCategory(signal),
+        source: signal.source === 'email' ? 'gmail' : 'slack',
+        sourceLink: `https://mail.google.com/mail/u/0/#all/${signal.id.replace('gmail_', '')}`,
+        rawContent: signal.body,
+        confidence: result.confidence || 0.7,
+      };
+
+      logger.info('Task extracted', { task });
+      return task;
+    } catch (error) {
+      logger.error('Failed to extract task', { error });
+      return null;
+    }
+  }
+
+  /**
+   * Create a task in Notion
+   */
+  private async createNotionTask(task: ExtractedTask): Promise<void> {
+    if (!this.composio) return;
+
+    try {
+      logger.info('Creating Notion task...', { title: task.title });
+
+      const databaseId = agentConfig.notion.databaseId || config.NOTION_DATABASE_ID;
+      if (!databaseId) {
+        logger.warn('Notion database ID not configured');
+        return;
+      }
+
+      // Create page in Notion database
+      const action = await this.composio.executeAction({
+        action: 'NOTION_CREATE_PAGE',
+        params: {
+          parent: {
+            database_id: databaseId,
+          },
+          properties: {
+            // Title property
+            [agentConfig.notion.properties.title]: {
+              title: [
+                {
+                  text: {
+                    content: task.title,
+                  },
+                },
+              ],
+            },
+            // Due Date
+            ...(task.dueDate && {
+              [agentConfig.notion.properties.dueDate]: {
+                date: {
+                  start: task.dueDate.toISOString().split('T')[0],
+                },
+              },
+            }),
+            // Priority
+            [agentConfig.notion.properties.priority]: {
+              select: {
+                name: task.priority.charAt(0).toUpperCase() + task.priority.slice(1),
+              },
+            },
+            // Source
+            [agentConfig.notion.properties.source]: {
+              select: {
+                name: task.source === 'gmail' ? 'Gmail' : 'Slack',
+              },
+            },
+            // Category
+            [agentConfig.notion.properties.category]: {
+              select: {
+                name: task.category,
+              },
+            },
+            // Status
+            [agentConfig.notion.properties.status]: {
+              select: {
+                name: agentConfig.notion.defaults.status,
+              },
+            },
+            // Confidence
+            [agentConfig.notion.properties.confidence]: {
+              number: Math.round(task.confidence * 100),
+            },
+            // Link
+            [agentConfig.notion.properties.link]: {
+              url: task.sourceLink,
+            },
+            // Raw Content
+            [agentConfig.notion.properties.rawContent]: {
+              rich_text: [
+                {
+                  text: {
+                    content: task.description.substring(0, 2000), // Notion limit
+                  },
+                },
+              ],
+            },
+          },
+        },
+      });
+
+      logger.info('✅ Notion task created successfully', { 
+        title: task.title,
+        page: action.response?.data,
+      });
+
+      // Publish event
+      await eventHub.emitEvent({
+        source: 'composio-client',
+        type: 'task:created',
+        data: { task, notionPage: action.response?.data },
+      });
+    } catch (error) {
+      logger.error('Failed to create Notion task', { task, error });
+    }
+  }
+
+  /**
+   * Reply to Slack message
+   */
+  private async replyToSlack(channel: string, threadTs: string, text: string): Promise<void> {
+    if (!this.composio) return;
+
+    try {
+      await this.composio.executeAction({
+        action: 'SLACK_SEND_MESSAGE',
+        params: {
+          channel,
+          text,
+          thread_ts: threadTs,
+        },
+      });
+
+      logger.info('Slack reply sent', { channel, text });
+    } catch (error) {
+      logger.error('Failed to send Slack reply', { error });
+    }
+  }
+
+  /**
+   * Get integration status
+   */
+  async getStatus(): Promise<{
+    initialized: boolean;
+    lastGmailCheck: Date | null;
+    lastSlackCheck: Date | null;
+    monitoring: boolean;
+  }> {
+    return {
+      initialized: this.initialized,
+      lastGmailCheck: this.lastGmailCheck,
+      lastSlackCheck: this.lastSlackCheck,
+      monitoring: this.monitoringInterval !== null,
+    };
+  }
+
+  /**
+   * Shutdown client
+   */
+  shutdown(): void {
+    this.stopMonitoring();
+    this.composio = null;
+    this.groq = null;
+    this.initialized = false;
+    logger.info('Composio client shutdown');
+  }
+}
+
+// ============================================================================
+// Singleton & Exports
+// ============================================================================
+
+let composioClient: ComposioClient | null = null;
+
+/**
+ * Get or create Composio client instance
+ */
+export function getComposioClient(): ComposioClient {
+  if (!composioClient) {
+    composioClient = new ComposioClient();
+  }
+  return composioClient;
+}
+
+/**
+ * Initialize Composio with API keys from environment
+ */
+export async function initializeComposio(): Promise<void> {
+  const client = getComposioClient();
+  
+  if (!config.COMPOSIO_API_KEY) {
+    throw new Error('COMPOSIO_API_KEY not configured');
+  }
+  
+  if (!process.env.GROQ_API_KEY) {
+    throw new Error('GROQ_API_KEY not configured');
+  }
+
+  await client.initialize({
+    apiKey: config.COMPOSIO_API_KEY,
+    groqApiKey: process.env.GROQ_API_KEY,
+    notionDatabaseId: config.NOTION_DATABASE_ID,
+  });
+}
+
+/**
+ * Start monitoring for signals
+ */
+export async function startMonitoring(): Promise<void> {
+  const client = getComposioClient();
+  await client.startMonitoring();
+}
+
+/**
+ * Stop monitoring
+ */
+export function stopMonitoring(): void {
+  const client = getComposioClient();
+  client.stopMonitoring();
+}
+
+/**
+ * Get client status
+ */
+export async function getIntegrationStatus() {
+  const client = getComposioClient();
+  return client.getStatus();
+}
+
+export default ComposioClient;

@@ -18,11 +18,11 @@
  */
 
 import { EventEmitter } from 'events';
-import { eventHub } from '../integrations/event-hub';
+import eventHub from '../integrations/event-hub';
 import { getOutputPublisher, type PendingReview } from './output-publisher';
 import { getEventSubscriber } from './event-subscriber';
-import { getLearningSystem } from './learning';
-import { logger } from '../utils/logger';
+// import { getLearningSystem } from './learning'; // Commented out - module may not exist
+import logger from '../utils/logger';
 import { type Signal } from './reasoning/context-builder';
 import { type SignalClassification } from './classifier-agent';
 import { type ActionDecision } from './decision-agent';
