@@ -9,19 +9,23 @@ export class NotionIntegration {
     }
 
     async queryDatabase(databaseId: string, filter?: any) {
-        const response = await this.notion.databases.query({
-            database_id: databaseId,
-            filter: filter,
-        });
-        return response;
+        try {
+            const response = await this.notion.databases.query({ database_id: databaseId, filter });
+            return response;
+        } catch (err) {
+            logger.error('NotionIntegration queryDatabase failed', err instanceof Error ? err.message : String(err));
+            throw err;
+        }
     }
 
     async updatePage(pageId: string, properties: any) {
-        const response = await this.notion.pages.update({
-            page_id: pageId,
-            properties: properties,
-        });
-        return response;
+        try {
+            const response = await this.notion.pages.update({ page_id: pageId, properties });
+            return response;
+        } catch (err) {
+            logger.error('NotionIntegration updatePage failed', err instanceof Error ? err.message : String(err));
+            throw err;
+        }
     }
 
     static createClientFromEnv() {

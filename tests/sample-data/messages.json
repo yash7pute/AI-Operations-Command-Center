@@ -1,0 +1,191 @@
+[
+  {
+    "id": "slack-001",
+    "channel": "C01ABC123",
+    "channelName": "#general",
+    "user": "U01USER01",
+    "userName": "Alice Johnson",
+    "text": "Good morning team! 🌅 Sprint planning starts in 30 minutes.",
+    "timestamp": "2025-10-17T04:19:02.028Z",
+    "threadTs": null,
+    "reactions": [
+      {
+        "emoji": "wave",
+        "count": 5
+      },
+      {
+        "emoji": "coffee",
+        "count": 3
+      }
+    ]
+  },
+  {
+    "id": "slack-002",
+    "channel": "C02DEF456",
+    "channelName": "#incidents",
+    "user": "U02USER02",
+    "userName": "Bob Smith",
+    "text": "🚨 Production alert: API latency spiking. Investigating now.",
+    "timestamp": "2025-10-17T04:34:02.028Z",
+    "threadTs": null,
+    "reactions": [
+      {
+        "emoji": "eyes",
+        "count": 8
+      }
+    ],
+    "attachments": [
+      {
+        "title": "Datadog Alert",
+        "text": "p99 latency: 2.5s (threshold: 500ms)",
+        "color": "danger"
+      }
+    ]
+  },
+  {
+    "id": "slack-003",
+    "channel": "C02DEF456",
+    "channelName": "#incidents",
+    "user": "U03USER03",
+    "userName": "Carol Lee",
+    "text": "Found the issue - database connection pool exhausted. Scaling up now.",
+    "timestamp": "2025-10-17T04:39:02.028Z",
+    "threadTs": "slack-002",
+    "reactions": [
+      {
+        "emoji": "rocket",
+        "count": 4
+      }
+    ]
+  },
+  {
+    "id": "slack-004",
+    "channel": "C03GHI789",
+    "channelName": "#dev-backend",
+    "user": "U04USER04",
+    "userName": "David Kim",
+    "text": "PR ready for review: https://github.com/company/repo/pull/342\n\nAdds retry logic with exponential backoff to payment processor.",
+    "timestamp": "2025-10-17T02:49:02.028Z",
+    "threadTs": null,
+    "reactions": [
+      {
+        "emoji": "+1",
+        "count": 2
+      }
+    ]
+  },
+  {
+    "id": "slack-005",
+    "channel": "C04JKL012",
+    "channelName": "#customer-success",
+    "user": "U05USER05",
+    "userName": "Emma Davis",
+    "text": "Just got off call with Acme Corp - they LOVE the new export feature! 🎉",
+    "timestamp": "2025-10-17T00:49:02.028Z",
+    "threadTs": null,
+    "reactions": [
+      {
+        "emoji": "tada",
+        "count": 12
+      },
+      {
+        "emoji": "heart",
+        "count": 8
+      }
+    ]
+  },
+  {
+    "id": "slack-006",
+    "channel": "C01ABC123",
+    "channelName": "#general",
+    "user": "U06USER06",
+    "userName": "Frank Wilson",
+    "text": "Reminder: Team lunch at 12:30 PM today at the pizza place down the street 🍕",
+    "timestamp": "2025-10-16T23:49:02.028Z",
+    "threadTs": null,
+    "reactions": [
+      {
+        "emoji": "pizza",
+        "count": 15
+      }
+    ]
+  },
+  {
+    "id": "slack-007",
+    "channel": "C05MNO345",
+    "channelName": "#design",
+    "user": "U07USER07",
+    "userName": "Grace Martinez",
+    "text": "New dashboard mockups ready for review!\n\nFigma: https://figma.com/file/dashboard-v2\n\nKey changes:\n• Simplified nav\n• Dark mode\n• Widget customization",
+    "timestamp": "2025-10-16T10:49:02.028Z",
+    "threadTs": null,
+    "reactions": [
+      {
+        "emoji": "art",
+        "count": 6
+      },
+      {
+        "emoji": "fire",
+        "count": 4
+      }
+    ],
+    "attachments": [
+      {
+        "title": "Dashboard V2 Mockup",
+        "imageUrl": "https://figma.com/preview/dashboard.png"
+      }
+    ]
+  },
+  {
+    "id": "slack-008",
+    "channel": "C06PQR678",
+    "channelName": "#security",
+    "user": "U08USER08",
+    "userName": "Henry Zhang",
+    "text": "⚠️ Dependabot alert: Critical vulnerability in lodash. PR to upgrade: https://github.com/company/repo/pull/345",
+    "timestamp": "2025-10-17T01:49:02.028Z",
+    "threadTs": null,
+    "reactions": [
+      {
+        "emoji": "lock",
+        "count": 3
+      }
+    ]
+  },
+  {
+    "id": "slack-009",
+    "channel": "C07STU901",
+    "channelName": "#random",
+    "user": "U09USER09",
+    "userName": "Irene Chen",
+    "text": "Anyone else getting Slack notifications twice today? Or is it just me? 🤔",
+    "timestamp": "2025-10-16T22:49:02.028Z",
+    "threadTs": null,
+    "reactions": [
+      {
+        "emoji": "thinking_face",
+        "count": 7
+      }
+    ]
+  },
+  {
+    "id": "slack-010",
+    "channel": "C08VWX234",
+    "channelName": "#announcements",
+    "user": "U10USER10",
+    "userName": "Jack Thompson",
+    "text": "📢 Welcome Sarah Chen to the team! She's joining as Senior Backend Engineer starting Monday. Say hi! 👋",
+    "timestamp": "2025-10-16T04:49:02.028Z",
+    "threadTs": null,
+    "reactions": [
+      {
+        "emoji": "wave",
+        "count": 25
+      },
+      {
+        "emoji": "tada",
+        "count": 18
+      }
+    ]
+  }
+]

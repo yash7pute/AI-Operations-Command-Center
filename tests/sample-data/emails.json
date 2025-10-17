@@ -1,0 +1,461 @@
+[
+  {
+    "id": "email-001",
+    "threadId": "thread-001",
+    "from": "ops@company.com",
+    "to": [
+      "team@company.com"
+    ],
+    "subject": "[URGENT] Production API Down - Revenue Impact",
+    "body": "CRITICAL: Payment API experiencing 500 errors. Revenue processing halted. Need immediate attention from backend team. Started 15 mins ago.",
+    "snippet": "CRITICAL: Payment API experiencing 500 errors...",
+    "date": "2025-10-17T04:49:02.027Z",
+    "labels": [
+      "URGENT",
+      "UNREAD"
+    ],
+    "attachments": [],
+    "priority": "high"
+  },
+  {
+    "id": "email-002",
+    "threadId": "thread-002",
+    "from": "security@company.com",
+    "to": [
+      "devops@company.com"
+    ],
+    "subject": "Security Alert: Unusual login activity detected",
+    "body": "Multiple failed login attempts detected from IP 192.168.1.100. Potential brute force attack. Review access logs immediately.",
+    "snippet": "Multiple failed login attempts detected...",
+    "date": "2025-10-17T02:49:02.027Z",
+    "labels": [
+      "SECURITY",
+      "UNREAD"
+    ],
+    "attachments": [
+      {
+        "filename": "access_logs.txt",
+        "mimeType": "text/plain",
+        "size": 15000
+      }
+    ],
+    "priority": "high"
+  },
+  {
+    "id": "email-003",
+    "threadId": "thread-003",
+    "from": "calendar@company.com",
+    "to": [
+      "you@company.com"
+    ],
+    "subject": "Invitation: Sprint Planning - Oct 18 @ 10:00 AM",
+    "body": "You have been invited to Sprint Planning on Thursday Oct 18 at 10:00 AM EST. Join Zoom: https://zoom.us/j/123456789",
+    "snippet": "You have been invited to Sprint Planning...",
+    "date": "2025-10-16T04:49:02.027Z",
+    "labels": [
+      "CALENDAR",
+      "UNREAD"
+    ],
+    "attachments": [
+      {
+        "filename": "meeting.ics",
+        "mimeType": "text/calendar",
+        "size": 1200
+      }
+    ],
+    "priority": "normal"
+  },
+  {
+    "id": "email-004",
+    "threadId": "thread-004",
+    "from": "support@company.com",
+    "to": [
+      "engineering@company.com"
+    ],
+    "subject": "Customer Escalation: Premium client unable to export data",
+    "body": "Premium customer (Acme Corp) reports export feature broken for 3 days. Ticket #4521. Client threatening to churn. Need fix ASAP.",
+    "snippet": "Premium customer reports export feature broken...",
+    "date": "2025-10-16T23:49:02.027Z",
+    "labels": [
+      "SUPPORT",
+      "UNREAD"
+    ],
+    "attachments": [],
+    "priority": "high"
+  },
+  {
+    "id": "email-005",
+    "threadId": "thread-005",
+    "from": "pm@company.com",
+    "to": [
+      "team@company.com"
+    ],
+    "subject": "Weekly Status Report - Oct 14",
+    "body": "Summary of this week:\n- Completed: 15 tickets\n- In Progress: 8 tickets\n- Blockers: 2 (API rate limits, design review)\n- Velocity: 82 points\n\nNext week focus: Performance optimization sprint.",
+    "snippet": "Summary of this week: Completed 15 tickets...",
+    "date": "2025-10-10T04:49:02.027Z",
+    "labels": [
+      "REPORTS"
+    ],
+    "attachments": [
+      {
+        "filename": "status_report.pdf",
+        "mimeType": "application/pdf",
+        "size": 250000
+      }
+    ],
+    "priority": "normal"
+  },
+  {
+    "id": "email-006",
+    "threadId": "thread-006",
+    "from": "github@company.com",
+    "to": [
+      "you@company.com"
+    ],
+    "subject": "[GitHub] PR #342: Add retry logic to payment processor",
+    "body": "@you requested review on PR #342. Changes: Added exponential backoff and circuit breaker to payment API calls. Please review by EOD.",
+    "snippet": "requested review on PR #342...",
+    "date": "2025-10-17T01:49:02.027Z",
+    "labels": [
+      "GITHUB",
+      "UNREAD"
+    ],
+    "attachments": [],
+    "priority": "normal"
+  },
+  {
+    "id": "email-007",
+    "threadId": "thread-007",
+    "from": "billing@aws.com",
+    "to": [
+      "finance@company.com"
+    ],
+    "subject": "Your AWS Invoice for October 2025",
+    "body": "Your AWS bill for October is $12,450.23. Charges breakdown: EC2 $8,200, RDS $2,100, S3 $1,500, Other $650. Due Nov 1.",
+    "snippet": "Your AWS bill for October is $12,450.23...",
+    "date": "2025-10-16T04:49:02.027Z",
+    "labels": [
+      "BILLING"
+    ],
+    "attachments": [
+      {
+        "filename": "invoice_oct2025.pdf",
+        "mimeType": "application/pdf",
+        "size": 85000
+      }
+    ],
+    "priority": "normal"
+  },
+  {
+    "id": "email-008",
+    "threadId": "thread-008",
+    "from": "newsletter@techcrunch.com",
+    "to": [
+      "you@company.com"
+    ],
+    "subject": "TC Daily: AI Startups Raise Record Funding in Q3",
+    "body": "Top stories today: 1) AI startups raised $15B in Q3 2025. 2) New regulations proposed for LLM transparency. 3) Meta announces GPT-5 competitor...",
+    "snippet": "Top stories today: AI startups raised $15B...",
+    "date": "2025-10-16T22:49:02.027Z",
+    "labels": [
+      "NEWSLETTER"
+    ],
+    "attachments": [],
+    "priority": "low"
+  },
+  {
+    "id": "email-009",
+    "threadId": "thread-009",
+    "from": "qa@company.com",
+    "to": [
+      "dev@company.com"
+    ],
+    "subject": "Bug Report: Login fails on Safari 17",
+    "body": "Steps to reproduce:\n1. Open app in Safari 17\n2. Enter valid credentials\n3. Click login\n\nExpected: Redirect to dashboard\nActual: Spinner hangs, no error message\n\nSeverity: Medium\nAffects ~12% of users",
+    "snippet": "Steps to reproduce: Open app in Safari 17...",
+    "date": "2025-10-16T20:49:02.027Z",
+    "labels": [
+      "BUG",
+      "UNREAD"
+    ],
+    "attachments": [
+      {
+        "filename": "screenshot.png",
+        "mimeType": "image/png",
+        "size": 420000
+      }
+    ],
+    "priority": "normal"
+  },
+  {
+    "id": "email-010",
+    "threadId": "thread-010",
+    "from": "partnerships@stripe.com",
+    "to": [
+      "integrations@company.com"
+    ],
+    "subject": "Stripe Connect Integration - Technical Onboarding",
+    "body": "Thank you for signing up for Stripe Connect. To complete integration:\n1. Review API docs\n2. Set up webhook endpoints\n3. Schedule technical call\n\nNext steps attached.",
+    "snippet": "Thank you for signing up for Stripe Connect...",
+    "date": "2025-10-16T16:49:02.027Z",
+    "labels": [
+      "PARTNERSHIPS"
+    ],
+    "attachments": [
+      {
+        "filename": "integration_guide.pdf",
+        "mimeType": "application/pdf",
+        "size": 1200000
+      }
+    ],
+    "priority": "normal"
+  },
+  {
+    "id": "email-011",
+    "threadId": "thread-011",
+    "from": "monitoring@company.com",
+    "to": [
+      "oncall@company.com"
+    ],
+    "subject": "Alert: API response time increased by 300%",
+    "body": "Datadog Alert: /api/search endpoint avg response time jumped from 150ms to 600ms. Started 20 mins ago. Check database indexes and query plans.",
+    "snippet": "API response time increased by 300%...",
+    "date": "2025-10-17T04:19:02.027Z",
+    "labels": [
+      "MONITORING",
+      "UNREAD"
+    ],
+    "attachments": [],
+    "priority": "high"
+  },
+  {
+    "id": "email-012",
+    "threadId": "thread-012",
+    "from": "devops@company.com",
+    "to": [
+      "all@company.com"
+    ],
+    "subject": "Scheduled Maintenance: Database upgrade Sunday 2 AM",
+    "body": "We will upgrade PostgreSQL from v14 to v15 this Sunday at 2 AM EST. Expected downtime: 30 minutes. Rollback plan in place.",
+    "snippet": "Database upgrade this Sunday at 2 AM EST...",
+    "date": "2025-10-15T04:49:02.027Z",
+    "labels": [
+      "MAINTENANCE"
+    ],
+    "attachments": [],
+    "priority": "normal"
+  },
+  {
+    "id": "email-013",
+    "threadId": "thread-013",
+    "from": "sales@company.com",
+    "to": [
+      "product@company.com"
+    ],
+    "subject": "Enterprise Client Request: SSO with Okta",
+    "body": "Fortune 500 prospect (deal size $500K ARR) requires Okta SSO integration before signing. Timeline: need by end of Q4. Can we prioritize?",
+    "snippet": "Enterprise client requires Okta SSO integration...",
+    "date": "2025-10-14T04:49:02.027Z",
+    "labels": [
+      "FEATURE_REQUEST"
+    ],
+    "attachments": [],
+    "priority": "high"
+  },
+  {
+    "id": "email-014",
+    "threadId": "thread-014",
+    "from": "ci@company.com",
+    "to": [
+      "dev@company.com"
+    ],
+    "subject": "✅ Build #1234 succeeded - Deploy to staging",
+    "body": "Build #1234 completed successfully.\nBranch: feature/payment-retry\nCommit: abc123f\nDuration: 8m 32s\nDeployed to staging environment.",
+    "snippet": "Build #1234 completed successfully...",
+    "date": "2025-10-17T00:49:02.027Z",
+    "labels": [
+      "CI"
+    ],
+    "attachments": [],
+    "priority": "low"
+  },
+  {
+    "id": "email-015",
+    "threadId": "thread-015",
+    "from": "legal@company.com",
+    "to": [
+      "engineering@company.com"
+    ],
+    "subject": "Action Required: GDPR Data Retention Policy Update",
+    "body": "New GDPR requirements mandate user data deletion within 30 days of account closure. Please update data retention policies and implement automated cleanup by Nov 15.",
+    "snippet": "New GDPR requirements mandate user data deletion...",
+    "date": "2025-10-13T04:49:02.027Z",
+    "labels": [
+      "LEGAL",
+      "UNREAD"
+    ],
+    "attachments": [
+      {
+        "filename": "gdpr_requirements.pdf",
+        "mimeType": "application/pdf",
+        "size": 340000
+      }
+    ],
+    "priority": "high"
+  },
+  {
+    "id": "email-016",
+    "threadId": "thread-016",
+    "from": "feedback@company.com",
+    "to": [
+      "product@company.com"
+    ],
+    "subject": "Customer Testimonial: \"This feature saved us 20 hours/week\"",
+    "body": "Customer (TechCorp Inc) shared amazing feedback: \"The new automation feature is a game changer. Our team saves 20 hours per week. Worth every penny!\"\n\nCan we feature this on the website?",
+    "snippet": "Customer shared amazing feedback about automation...",
+    "date": "2025-10-16T04:49:02.027Z",
+    "labels": [
+      "FEEDBACK"
+    ],
+    "attachments": [],
+    "priority": "low"
+  },
+  {
+    "id": "email-017",
+    "threadId": "thread-017",
+    "from": "status@sendgrid.com",
+    "to": [
+      "tech@company.com"
+    ],
+    "subject": "SendGrid Incident: Email delivery delays",
+    "body": "We are experiencing delays in email delivery due to infrastructure issues. Current delay: 15-30 minutes. Our team is working on resolution. Updates: status.sendgrid.com",
+    "snippet": "Experiencing delays in email delivery...",
+    "date": "2025-10-17T03:49:02.027Z",
+    "labels": [
+      "VENDOR",
+      "UNREAD"
+    ],
+    "attachments": [],
+    "priority": "normal"
+  },
+  {
+    "id": "email-018",
+    "threadId": "thread-018",
+    "from": "hr@company.com",
+    "to": [
+      "engineering@company.com"
+    ],
+    "subject": "New Hire Starting Monday: Sarah Chen - Senior Backend Engineer",
+    "body": "Please welcome Sarah Chen joining as Senior Backend Engineer on Monday Oct 21. Setup:\n- GitHub access\n- AWS credentials\n- Slack workspace\n- Assign onboarding buddy\n\nContact: sarah.chen@company.com",
+    "snippet": "Please welcome Sarah Chen joining as Senior Backend...",
+    "date": "2025-10-12T04:49:02.027Z",
+    "labels": [
+      "HR"
+    ],
+    "attachments": [],
+    "priority": "normal"
+  },
+  {
+    "id": "email-019",
+    "threadId": "thread-019",
+    "from": "api@company.com",
+    "to": [
+      "backend@company.com"
+    ],
+    "subject": "Warning: Approaching API rate limit (80% used)",
+    "body": "Your application has used 80% of monthly API quota (8,000 / 10,000 requests). Current usage trend suggests you will hit limit by Oct 25. Consider upgrading plan or optimizing calls.",
+    "snippet": "Approaching API rate limit: 80% used...",
+    "date": "2025-10-16T22:49:02.027Z",
+    "labels": [
+      "API",
+      "UNREAD"
+    ],
+    "attachments": [],
+    "priority": "normal"
+  },
+  {
+    "id": "email-020",
+    "threadId": "thread-020",
+    "from": "tech-lead@company.com",
+    "to": [
+      "engineering@company.com"
+    ],
+    "subject": "Tech Talk Recording: Building Resilient Microservices",
+    "body": "Recording from yesterday's tech talk now available. Topics covered:\n- Circuit breakers\n- Retry strategies\n- Chaos engineering\n\nSlides and code examples attached. Great session!",
+    "snippet": "Recording from tech talk now available...",
+    "date": "2025-10-16T08:49:02.027Z",
+    "labels": [
+      "LEARNING"
+    ],
+    "attachments": [
+      {
+        "filename": "slides.pdf",
+        "mimeType": "application/pdf",
+        "size": 5200000
+      },
+      {
+        "filename": "code_examples.zip",
+        "mimeType": "application/zip",
+        "size": 15000
+      }
+    ],
+    "priority": "low"
+  },
+  {
+    "id": "email-021",
+    "threadId": "thread-021",
+    "from": "backup@company.com",
+    "to": [
+      "dba@company.com"
+    ],
+    "subject": "❌ Database Backup Failed - Production DB",
+    "body": "CRITICAL: Automated backup for production database failed at 3:00 AM. Error: Insufficient disk space on backup server. Last successful backup: 2 days ago. Action required immediately.",
+    "snippet": "Database backup failed: Insufficient disk space...",
+    "date": "2025-10-16T18:49:02.027Z",
+    "labels": [
+      "DATABASE",
+      "CRITICAL",
+      "UNREAD"
+    ],
+    "attachments": [],
+    "priority": "high"
+  },
+  {
+    "id": "email-022",
+    "threadId": "thread-022",
+    "from": "dependabot@github.com",
+    "to": [
+      "security@company.com"
+    ],
+    "subject": "🔒 Security Alert: Critical vulnerability in lodash 4.17.15",
+    "body": "Dependabot found a critical security vulnerability:\n\nPackage: lodash\nVersion: 4.17.15\nSeverity: Critical (CVSS 9.1)\nCVE: CVE-2025-12345\n\nRecommended: Upgrade to lodash 4.17.21 immediately.\nAffected repos: 5 repositories",
+    "snippet": "Critical security vulnerability in lodash...",
+    "date": "2025-10-17T02:49:02.027Z",
+    "labels": [
+      "SECURITY",
+      "DEPENDABOT",
+      "UNREAD"
+    ],
+    "attachments": [],
+    "priority": "high"
+  },
+  {
+    "id": "email-023",
+    "threadId": "thread-023",
+    "from": "design@company.com",
+    "to": [
+      "product@company.com",
+      "engineering@company.com"
+    ],
+    "subject": "Design Review: New Dashboard Mockups",
+    "body": "Hi team! Completed mockups for the new analytics dashboard. Key changes:\n- Simplified navigation\n- Dark mode support\n- Customizable widgets\n\nFigma link: https://figma.com/file/abc123\nReview by Friday please!",
+    "snippet": "Completed mockups for new analytics dashboard...",
+    "date": "2025-10-16T10:49:02.027Z",
+    "labels": [
+      "DESIGN"
+    ],
+    "attachments": [],
+    "priority": "normal"
+  }
+]

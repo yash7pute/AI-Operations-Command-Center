@@ -1,0 +1,931 @@
+/**
+ * Dashboard Data Provider for Member 4
+ * 
+ * Provides real-time reasoning metrics, classifications, pending reviews,
+ * performance metrics, and learning insights for the dashboard interface.
+ * 
+ * Features:
+ * - Real-time signal processing status
+ * - Recent classifications with confidence scores
+ * - Pending human reviews queue
+ * - Performance and accuracy metrics
+ * - Learning system insights
+ * - Data caching (5 seconds) to reduce overhead
+ * - WebSocket support for live updates
+ * - Manual refresh capability
+ * 
+ * @module DashboardProvider
+ */
+
+import { EventEmitter } from 'events';
+import { eventHub } from '../integrations/event-hub';
+import { getOutputPublisher, type PendingReview } from './output-publisher';
+import { getEventSubscriber } from './event-subscriber';
+import { getLearningSystem } from './learning';
+import { logger } from '../utils/logger';
+import { type Signal } from './reasoning/context-builder';
+import { type SignalClassification } from './classifier-agent';
+import { type ActionDecision } from './decision-agent';
+
+// ============================================================================
+// Type Definitions
+// ============================================================================
+
+/**
+ * Live signal processing status
+ */
+export interface LiveSignal {
+    id: string;
+    source: string;
+    subject: string;
+    status: 'queued' | 'preprocessing' | 'classifying' | 'deciding' | 'publishing' | 'complete' | 'error';
+    progress: number; // 0-100
+    startedAt: string;
+    currentStage?: string;
+    error?: string;
+}
+
+/**
+ * Recent decision with full context
+ */
+export interface RecentDecision {
+    id: string;
+    signalId: string;
+    signalSource: string;
+    signalSubject: string;
+    classification: {
+        urgency: 'critical' | 'high' | 'medium' | 'low';
+        importance: 'high' | 'medium' | 'low';
+        category: string;
+        confidence: number;
+    };
+    decision: {
+        action: string;
+        platform: string;
+        confidence: number;
+        requiresApproval: boolean;
+    };
+    timestamp: string;
+    processingTime: number;
+    outcome?: 'published' | 'pending_approval' | 'rejected' | 'executed' | 'failed';
+}
+
+/**
+ * Pending review for dashboard display
+ */
+export interface DashboardReview {
+    id: string;
+    signalId: string;
+    signalSource: string;
+    signalSubject: string;
+    decision: {
+        action: string;
+        platform: string;
+        confidence: number;
+    };
+    reason: string;
+    queuedAt: string;
+    timeoutAt: string;
+    urgency: 'critical' | 'high' | 'medium' | 'low';
+    status: 'pending' | 'approved' | 'rejected' | 'timed_out';
+}
+
+/**
+ * Performance metrics
+ */
+export interface PerformanceMetrics {
+    totalProcessed: number;
+    averageConfidence: number;
+    accuracyRate: number;
+    avgProcessingTime: number;
+    cacheHitRate: number;
+    throughputPerMinute: number;
+    errorRate: number;
+    uptime: number; // seconds
+}
+
+/**
+ * Learning insight
+ */
+export interface LearningInsight {
+    type: 'pattern_discovered' | 'optimization_applied' | 'performance_improved' | 'anomaly_detected';
+    description: string;
+    confidence: number;
+    timestamp: string;
+    metadata?: Record<string, any>;
+}
+
+/**
+ * Complete dashboard data
+ */
+export interface DashboardData {
+    liveSignals: LiveSignal[];
+    recentDecisions: RecentDecision[];
+    pendingReviews: DashboardReview[];
+    metrics: PerformanceMetrics;
+    learningInsights: LearningInsight[];
+    lastUpdated: string;
+}
+
+/**
+ * Dashboard provider configuration
+ */
+export interface DashboardProviderConfig {
+    cacheTimeMs?: number; // Default: 5000 (5 seconds)
+    maxLiveSignals?: number; // Default: 50
+    maxRecentDecisions?: number; // Default: 100
+    maxLearningInsights?: number; // Default: 20
+    enableWebSocket?: boolean; // Default: true
+    websocketPort?: number; // Default: 8080
+    enablePolling?: boolean; // Default: true
+    pollingIntervalMs?: number; // Default: 2000
+    logRequests?: boolean; // Default: true
+}
+
+/**
+ * Signal processing tracker
+ */
+interface ProcessingTracker {
+    signalId: string;
+    signal: Signal;
+    status: LiveSignal['status'];
+    progress: number;
+    startedAt: string;
+    stages: {
+        preprocessing?: number;
+        classification?: number;
+        decision?: number;
+        publication?: number;
+    };
+    error?: string;
+}
+
+// ============================================================================
+// Dashboard Data Provider Class
+// ============================================================================
+
+/**
+ * Dashboard Data Provider
+ * 
+ * Aggregates data from reasoning pipeline, output publisher, learning system,
+ * and event subscriber to provide comprehensive dashboard metrics.
+ */
+class DashboardProvider extends EventEmitter {
+    private config: Required<DashboardProviderConfig>;
+    private cachedData: DashboardData | null = null;
+    private cacheTimestamp: number = 0;
+    private processingTrackers: Map<string, ProcessingTracker> = new Map();
+    private decisionHistory: RecentDecision[] = [];
+    private learningInsightsHistory: LearningInsight[] = [];
+    private startTime: number = Date.now();
+    private totalProcessedCount: number = 0;
+    private totalErrors: number = 0;
+    private processingTimes: number[] = [];
+    private confidenceScores: number[] = [];
+    private pollingTimer?: NodeJS.Timeout;
+    private websocketServer?: any;
+
+    constructor(config?: DashboardProviderConfig) {
+        super();
+        
+        this.config = {
+            cacheTimeMs: config?.cacheTimeMs ?? 5000,
+            maxLiveSignals: config?.maxLiveSignals ?? 50,
+            maxRecentDecisions: config?.maxRecentDecisions ?? 100,
+            maxLearningInsights: config?.maxLearningInsights ?? 20,
+            enableWebSocket: config?.enableWebSocket ?? true,
+            websocketPort: config?.websocketPort ?? 8080,
+            enablePolling: config?.enablePolling ?? true,
+            pollingIntervalMs: config?.pollingIntervalMs ?? 2000,
+            logRequests: config?.logRequests ?? true,
+        };
+
+        this.initializeEventListeners();
+        
+        if (this.config.enablePolling) {
+            this.startPolling();
+        }
+
+        logger.info('Dashboard provider initialized', {
+            config: this.config,
+        });
+    }
+
+    /**
+     * Initialize event listeners for real-time updates
+     */
+    private initializeEventListeners(): void {
+        // Listen for signal processing events
+        eventHub.subscribe({
+            source: 'event-subscriber',
+            type: 'signal:received',
+            handler: (event) => {
+                const signal = event.data as Signal;
+                this.trackSignalProcessing(signal, 'queued', 0);
+            },
+        });
+
+        eventHub.subscribe({
+            source: 'reasoning-pipeline',
+            type: 'signal:preprocessing',
+            handler: (event) => {
+                const { signalId } = event.data;
+                this.updateSignalProgress(signalId, 'preprocessing', 20);
+            },
+        });
+
+        eventHub.subscribe({
+            source: 'reasoning-pipeline',
+            type: 'signal:classifying',
+            handler: (event) => {
+                const { signalId } = event.data;
+                this.updateSignalProgress(signalId, 'classifying', 40);
+            },
+        });
+
+        eventHub.subscribe({
+            source: 'reasoning-pipeline',
+            type: 'signal:deciding',
+            handler: (event) => {
+                const { signalId } = event.data;
+                this.updateSignalProgress(signalId, 'deciding', 70);
+            },
+        });
+
+        eventHub.subscribe({
+            source: 'output-publisher',
+            type: 'action:ready',
+            handler: (event) => {
+                const { action, reasoningResult } = event.data;
+                this.recordDecision(reasoningResult, 'published');
+                this.updateSignalProgress(reasoningResult.signal.id, 'complete', 100);
+            },
+        });
+
+        eventHub.subscribe({
+            source: 'output-publisher',
+            type: 'action:requires_approval',
+            handler: (event) => {
+                const { action, reasoningResult } = event.data;
+                this.recordDecision(reasoningResult, 'pending_approval');
+                this.updateSignalProgress(reasoningResult.signal.id, 'complete', 100);
+            },
+        });
+
+        eventHub.subscribe({
+            source: 'output-publisher',
+            type: 'action:rejected',
+            handler: (event) => {
+                const { signalId, reason } = event.data;
+                this.updateSignalProgress(signalId, 'error', 100, reason);
+                this.totalErrors++;
+            },
+        });
+
+        // Listen for learning insights
+        eventHub.subscribe({
+            source: 'learning-system',
+            type: 'pattern:discovered',
+            handler: (event) => {
+                const { pattern, confidence } = event.data;
+                this.addLearningInsight({
+                    type: 'pattern_discovered',
+                    description: `New pattern discovered: ${pattern.type}`,
+                    confidence,
+                    timestamp: new Date().toISOString(),
+                    metadata: { pattern },
+                });
+            },
+        });
+
+        eventHub.subscribe({
+            source: 'learning-system',
+            type: 'optimization:applied',
+            handler: (event) => {
+                const { optimization, improvement } = event.data;
+                this.addLearningInsight({
+                    type: 'optimization_applied',
+                    description: `Optimization applied: ${improvement}% improvement`,
+                    confidence: 0.9,
+                    timestamp: new Date().toISOString(),
+                    metadata: { optimization, improvement },
+                });
+            },
+        });
+
+        logger.info('Dashboard event listeners initialized');
+    }
+
+    /**
+     * Get current signals being processed
+     */
+    getCurrentProcessing(): LiveSignal[] {
+        const liveSignals: LiveSignal[] = [];
+
+        for (const tracker of this.processingTrackers.values()) {
+            if (tracker.status !== 'complete' && tracker.status !== 'error') {
+                liveSignals.push({
+                    id: tracker.signalId,
+                    source: tracker.signal.source,
+                    subject: tracker.signal.subject || 'No subject',
+                    status: tracker.status,
+                    progress: tracker.progress,
+                    startedAt: tracker.startedAt,
+                    currentStage: this.getCurrentStage(tracker),
+                    error: tracker.error,
+                });
+            }
+        }
+
+        // Sort by start time (newest first)
+        return liveSignals
+            .sort((a, b) => b.startedAt.localeCompare(a.startedAt))
+            .slice(0, this.config.maxLiveSignals);
+    }
+
+    /**
+     * Get recent classifications with confidence
+     */
+    getRecentClassifications(limit?: number): RecentDecision[] {
+        const maxLimit = limit || this.config.maxRecentDecisions;
+        return this.decisionHistory
+            .slice(0, maxLimit)
+            .sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+    }
+
+    /**
+     * Get pending reviews from output publisher
+     */
+    getPendingReviews(): DashboardReview[] {
+        try {
+            const publisher = getOutputPublisher();
+            const pendingReviews = publisher.getPendingReviews();
+
+            return pendingReviews.map(review => {
+                const classification = review.reasoningResult.classification?.classification;
+                
+                return {
+                    id: review.reviewId,
+                    signalId: review.reasoningResult.signal.id,
+                    signalSource: review.reasoningResult.signal.source,
+                    signalSubject: review.reasoningResult.signal.subject || 'No subject',
+                    decision: {
+                        action: review.reasoningResult.decision.decision.action,
+                        platform: review.reasoningResult.decision.decision.actionParams.platform || 'unknown',
+                        confidence: review.reasoningResult.decision.decision.confidence,
+                    },
+                    reason: review.reason,
+                    queuedAt: review.requestedAt,
+                    timeoutAt: review.timeoutAt,
+                    urgency: classification?.urgency || 'medium',
+                    status: review.status,
+                };
+            }).sort((a, b) => a.queuedAt.localeCompare(b.queuedAt));
+        } catch (error) {
+            logger.error('Failed to get pending reviews', { error });
+            return [];
+        }
+    }
+
+    /**
+     * Get performance metrics
+     */
+    getPerformanceMetrics(): PerformanceMetrics {
+        const now = Date.now();
+        const uptimeSeconds = Math.floor((now - this.startTime) / 1000);
+        const oneMinuteAgo = now - 60000;
+
+        // Calculate throughput (signals processed in last minute)
+        const recentDecisions = this.decisionHistory.filter(
+            d => new Date(d.timestamp).getTime() > oneMinuteAgo
+        );
+        const throughputPerMinute = recentDecisions.length;
+
+        // Calculate average confidence
+        const avgConfidence = this.confidenceScores.length > 0
+            ? this.confidenceScores.reduce((sum, c) => sum + c, 0) / this.confidenceScores.length
+            : 0;
+
+        // Calculate average processing time
+        const avgProcessingTime = this.processingTimes.length > 0
+            ? this.processingTimes.reduce((sum, t) => sum + t, 0) / this.processingTimes.length
+            : 0;
+
+        // Calculate error rate
+        const errorRate = this.totalProcessedCount > 0
+            ? (this.totalErrors / this.totalProcessedCount) * 100
+            : 0;
+
+        // Get cache hit rate from event subscriber
+        let cacheHitRate = 0;
+        try {
+            const subscriber = getEventSubscriber();
+            const stats = subscriber.getStats();
+            cacheHitRate = stats.totalSignals > 0
+                ? ((stats.totalSignals - stats.queueSize) / stats.totalSignals) * 100
+                : 0;
+        } catch (error) {
+            // Subscriber may not be initialized
+        }
+
+        // Calculate accuracy rate (successful publications / total attempts)
+        const successfulPublications = this.decisionHistory.filter(
+            d => d.outcome === 'published' || d.outcome === 'executed'
+        ).length;
+        const accuracyRate = this.totalProcessedCount > 0
+            ? (successfulPublications / this.totalProcessedCount) * 100
+            : 0;
+
+        return {
+            totalProcessed: this.totalProcessedCount,
+            averageConfidence: Math.round(avgConfidence * 100) / 100,
+            accuracyRate: Math.round(accuracyRate * 100) / 100,
+            avgProcessingTime: Math.round(avgProcessingTime),
+            cacheHitRate: Math.round(cacheHitRate * 100) / 100,
+            throughputPerMinute,
+            errorRate: Math.round(errorRate * 100) / 100,
+            uptime: uptimeSeconds,
+        };
+    }
+
+    /**
+     * Get learning insights
+     */
+    getLearningInsights(): LearningInsight[] {
+        return this.learningInsightsHistory
+            .slice(0, this.config.maxLearningInsights)
+            .sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+    }
+
+    /**
+     * Get complete dashboard data (cached)
+     */
+    getDashboardData(): DashboardData {
+        const now = Date.now();
+        
+        // Return cached data if still valid
+        if (this.cachedData && (now - this.cacheTimestamp) < this.config.cacheTimeMs) {
+            if (this.config.logRequests) {
+                logger.debug('Returning cached dashboard data', {
+                    age: now - this.cacheTimestamp,
+                });
+            }
+            return this.cachedData;
+        }
+
+        // Refresh data
+        const data = this.refreshDashboardData();
+        
+        if (this.config.logRequests) {
+            logger.info('Dashboard data refreshed', {
+                liveSignals: data.liveSignals.length,
+                recentDecisions: data.recentDecisions.length,
+                pendingReviews: data.pendingReviews.length,
+                totalProcessed: data.metrics.totalProcessed,
+            });
+        }
+
+        return data;
+    }
+
+    /**
+     * Refresh dashboard data (bypass cache)
+     */
+    refreshDashboardData(): DashboardData {
+        const data: DashboardData = {
+            liveSignals: this.getCurrentProcessing(),
+            recentDecisions: this.getRecentClassifications(),
+            pendingReviews: this.getPendingReviews(),
+            metrics: this.getPerformanceMetrics(),
+            learningInsights: this.getLearningInsights(),
+            lastUpdated: new Date().toISOString(),
+        };
+
+        // Update cache
+        this.cachedData = data;
+        this.cacheTimestamp = Date.now();
+
+        // Emit update event
+        this.emit('data:updated', data);
+
+        return data;
+    }
+
+    /**
+     * Start polling for automatic updates
+     */
+    private startPolling(): void {
+        if (this.pollingTimer) {
+            clearInterval(this.pollingTimer);
+        }
+
+        this.pollingTimer = setInterval(() => {
+            this.refreshDashboardData();
+        }, this.config.pollingIntervalMs);
+
+        logger.info('Dashboard polling started', {
+            interval: this.config.pollingIntervalMs,
+        });
+    }
+
+    /**
+     * Stop polling
+     */
+    stopPolling(): void {
+        if (this.pollingTimer) {
+            clearInterval(this.pollingTimer);
+            this.pollingTimer = undefined;
+            logger.info('Dashboard polling stopped');
+        }
+    }
+
+    /**
+     * Track signal processing
+     */
+    private trackSignalProcessing(signal: Signal, status: LiveSignal['status'], progress: number): void {
+        this.processingTrackers.set(signal.id, {
+            signalId: signal.id,
+            signal,
+            status,
+            progress,
+            startedAt: new Date().toISOString(),
+            stages: {},
+        });
+
+        // Clean up old trackers (keep last 100)
+        if (this.processingTrackers.size > 100) {
+            const oldestKey = this.processingTrackers.keys().next().value;
+            this.processingTrackers.delete(oldestKey);
+        }
+    }
+
+    /**
+     * Update signal processing progress
+     */
+    private updateSignalProgress(
+        signalId: string,
+        status: LiveSignal['status'],
+        progress: number,
+        error?: string
+    ): void {
+        const tracker = this.processingTrackers.get(signalId);
+        if (tracker) {
+            tracker.status = status;
+            tracker.progress = progress;
+            if (error) {
+                tracker.error = error;
+            }
+
+            // Record stage timing
+            const stageName = status as keyof ProcessingTracker['stages'];
+            if (stageName !== 'queued' && stageName !== 'complete' && stageName !== 'error') {
+                tracker.stages[stageName] = Date.now();
+            }
+
+            // If complete, record metrics
+            if (status === 'complete' || status === 'error') {
+                const processingTime = Date.now() - new Date(tracker.startedAt).getTime();
+                this.processingTimes.push(processingTime);
+                this.totalProcessedCount++;
+
+                // Keep only last 1000 processing times
+                if (this.processingTimes.length > 1000) {
+                    this.processingTimes.shift();
+                }
+            }
+        }
+    }
+
+    /**
+     * Record decision in history
+     */
+    private recordDecision(reasoningResult: any, outcome: RecentDecision['outcome']): void {
+        const classification = reasoningResult.classification?.classification;
+        const decision = reasoningResult.decision?.decision;
+
+        if (!classification || !decision) {
+            return;
+        }
+
+        const recentDecision: RecentDecision = {
+            id: decision.decisionId,
+            signalId: reasoningResult.signal.id,
+            signalSource: reasoningResult.signal.source,
+            signalSubject: reasoningResult.signal.subject || 'No subject',
+            classification: {
+                urgency: classification.urgency,
+                importance: classification.importance,
+                category: classification.category,
+                confidence: classification.confidence,
+            },
+            decision: {
+                action: decision.action,
+                platform: decision.actionParams.platform || 'unknown',
+                confidence: decision.confidence,
+                requiresApproval: decision.requiresApproval,
+            },
+            timestamp: new Date().toISOString(),
+            processingTime: reasoningResult.metadata?.processingTime || 0,
+            outcome,
+        };
+
+        // Add to history
+        this.decisionHistory.unshift(recentDecision);
+
+        // Track confidence score
+        this.confidenceScores.push(decision.confidence);
+
+        // Keep only max decisions
+        if (this.decisionHistory.length > this.config.maxRecentDecisions) {
+            this.decisionHistory.pop();
+        }
+
+        // Keep only last 1000 confidence scores
+        if (this.confidenceScores.length > 1000) {
+            this.confidenceScores.shift();
+        }
+    }
+
+    /**
+     * Add learning insight
+     */
+    private addLearningInsight(insight: LearningInsight): void {
+        this.learningInsightsHistory.unshift(insight);
+
+        // Keep only max insights
+        if (this.learningInsightsHistory.length > this.config.maxLearningInsights) {
+            this.learningInsightsHistory.pop();
+        }
+
+        // Emit insight event
+        this.emit('insight:added', insight);
+    }
+
+    /**
+     * Get current stage description
+     */
+    private getCurrentStage(tracker: ProcessingTracker): string {
+        switch (tracker.status) {
+            case 'queued':
+                return 'Waiting in queue';
+            case 'preprocessing':
+                return 'Normalizing signal data';
+            case 'classifying':
+                return 'Analyzing urgency and category';
+            case 'deciding':
+                return 'Determining action';
+            case 'publishing':
+                return 'Publishing to executor';
+            case 'complete':
+                return 'Processing complete';
+            case 'error':
+                return `Error: ${tracker.error || 'Unknown error'}`;
+            default:
+                return 'Processing';
+        }
+    }
+
+    /**
+     * Get statistics summary
+     */
+    getStats(): {
+        trackedSignals: number;
+        decisionHistory: number;
+        learningInsights: number;
+        cacheAge: number;
+    } {
+        return {
+            trackedSignals: this.processingTrackers.size,
+            decisionHistory: this.decisionHistory.length,
+            learningInsights: this.learningInsightsHistory.length,
+            cacheAge: this.cachedData ? Date.now() - this.cacheTimestamp : 0,
+        };
+    }
+
+    /**
+     * Clear all cached data
+     */
+    clearCache(): void {
+        this.cachedData = null;
+        this.cacheTimestamp = 0;
+        logger.info('Dashboard cache cleared');
+    }
+
+    /**
+     * Reset all metrics
+     */
+    resetMetrics(): void {
+        this.totalProcessedCount = 0;
+        this.totalErrors = 0;
+        this.processingTimes = [];
+        this.confidenceScores = [];
+        this.startTime = Date.now();
+        this.decisionHistory = [];
+        this.learningInsightsHistory = [];
+        this.processingTrackers.clear();
+        this.clearCache();
+        logger.info('Dashboard metrics reset');
+    }
+
+    /**
+     * Shutdown provider
+     */
+    shutdown(): void {
+        this.stopPolling();
+        this.removeAllListeners();
+        logger.info('Dashboard provider shutdown');
+    }
+}
+
+// ============================================================================
+// Singleton & Exports
+// ============================================================================
+
+let dashboardProvider: DashboardProvider | null = null;
+
+/**
+ * Get or create dashboard provider instance
+ */
+export function getDashboardProvider(config?: DashboardProviderConfig): DashboardProvider {
+    if (!dashboardProvider) {
+        dashboardProvider = new DashboardProvider(config);
+    }
+    return dashboardProvider;
+}
+
+/**
+ * Get current signals being processed
+ */
+export function getCurrentProcessing(): LiveSignal[] {
+    const provider = getDashboardProvider();
+    return provider.getCurrentProcessing();
+}
+
+/**
+ * Get recent classifications
+ */
+export function getRecentClassifications(limit?: number): RecentDecision[] {
+    const provider = getDashboardProvider();
+    return provider.getRecentClassifications(limit);
+}
+
+/**
+ * Get pending reviews
+ */
+export function getPendingReviews(): DashboardReview[] {
+    const provider = getDashboardProvider();
+    return provider.getPendingReviews();
+}
+
+/**
+ * Get performance metrics
+ */
+export function getPerformanceMetrics(): PerformanceMetrics {
+    const provider = getDashboardProvider();
+    return provider.getPerformanceMetrics();
+}
+
+/**
+ * Get learning insights
+ */
+export function getLearningInsights(): LearningInsight[] {
+    const provider = getDashboardProvider();
+    return provider.getLearningInsights();
+}
+
+/**
+ * Get complete dashboard data
+ */
+export function getDashboardData(): DashboardData {
+    const provider = getDashboardProvider();
+    return provider.getDashboardData();
+}
+
+/**
+ * Refresh dashboard data (bypass cache)
+ */
+export function refreshDashboardData(): DashboardData {
+    const provider = getDashboardProvider();
+    return provider.refreshDashboardData();
+}
+
+/**
+ * Subscribe to dashboard updates
+ */
+export function subscribeToDashboardUpdates(callback: (data: DashboardData) => void): () => void {
+    const provider = getDashboardProvider();
+    provider.on('data:updated', callback);
+    
+    // Return unsubscribe function
+    return () => {
+        provider.off('data:updated', callback);
+    };
+}
+
+/**
+ * Subscribe to learning insights
+ */
+export function subscribeToInsights(callback: (insight: LearningInsight) => void): () => void {
+    const provider = getDashboardProvider();
+    provider.on('insight:added', callback);
+    
+    // Return unsubscribe function
+    return () => {
+        provider.off('insight:added', callback);
+    };
+}
+
+// ============================================================================
+// WebSocket/Polling Endpoint Helpers
+// ============================================================================
+
+/**
+ * Create polling endpoint handler for Express/HTTP
+ * 
+ * Usage:
+ * ```typescript
+ * import express from 'express';
+ * import { createPollingEndpoint } from './agents/dashboard-provider';
+ * 
+ * const app = express();
+ * app.get('/api/dashboard', createPollingEndpoint());
+ * ```
+ */
+export function createPollingEndpoint() {
+    return async (req: any, res: any) => {
+        try {
+            const data = getDashboardData();
+            res.json({
+                success: true,
+                data,
+                timestamp: new Date().toISOString(),
+            });
+        } catch (error) {
+            logger.error('Dashboard endpoint error', { error });
+            res.status(500).json({
+                success: false,
+                error: 'Failed to fetch dashboard data',
+            });
+        }
+    };
+}
+
+/**
+ * Create WebSocket handler for real-time updates
+ * 
+ * Usage:
+ * ```typescript
+ * import WebSocket from 'ws';
+ * import { createWebSocketHandler } from './agents/dashboard-provider';
+ * 
+ * const wss = new WebSocket.Server({ port: 8080 });
+ * wss.on('connection', createWebSocketHandler());
+ * ```
+ */
+export function createWebSocketHandler() {
+    return (ws: any) => {
+        logger.info('WebSocket client connected');
+
+        // Send initial data
+        const initialData = getDashboardData();
+        ws.send(JSON.stringify({
+            type: 'initial',
+            data: initialData,
+        }));
+
+        // Subscribe to updates
+        const unsubscribe = subscribeToDashboardUpdates((data) => {
+            if (ws.readyState === 1) { // WebSocket.OPEN
+                ws.send(JSON.stringify({
+                    type: 'update',
+                    data,
+                }));
+            }
+        });
+
+        // Handle disconnect
+        ws.on('close', () => {
+            unsubscribe();
+            logger.info('WebSocket client disconnected');
+        });
+
+        // Handle errors
+        ws.on('error', (error: Error) => {
+            logger.error('WebSocket error', { error });
+            unsubscribe();
+        });
+    };
+}
+
+/**
+ * Export types for external use
+ */
+export type {
+    DashboardData,
+    LiveSignal,
+    RecentDecision,
+    DashboardReview,
+    PerformanceMetrics,
+    LearningInsight,
+    DashboardProviderConfig,
+};
