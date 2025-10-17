@@ -1,8 +1,8 @@
 # 🤖 AI Operations Command Center
 
-**Status**: ✅ **100% Complete** - Production Ready  
-**Version**: 1.0.0  
-**Completion Date**: October 17, 2025
+**Status**: 🚧 **In Development** - Core Features Complete  
+**Version**: 0.9.0  
+**Last Updated**: October 17, 2025
 
 An intelligent workflow automation system powered by AI that orchestrates multi-platform integrations with advanced agent-based architecture, comprehensive error handling, and robust testing infrastructure.
 
@@ -13,18 +13,16 @@ The AI Operations Command Center is a comprehensive TypeScript application that 
 - **AI-Powered Agents**: Intelligent task management, notifications, data organization, and analytics
 - **Workflow Automation**: Multi-step workflows with rollback, idempotency, and recovery
 - **Enterprise-Grade**: Error handling, logging, monitoring, and performance tracking
-- **Fully Tested**: 53 comprehensive tests with 100% pass rate
+- **Extensive Testing**: 357+ passing tests covering integrations, workflows, and error handling
 
 ## 📊 Quick Stats
 
-- **Total Prompts Delivered**: 30/30 ✅
-- **Total Code Lines**: 17,100+
-- **Total Test Cases**: 76 (all passing)
-- **Platforms Integrated**: 6
-- **AI Agents**: 5
-- **Documentation**: 17,900+ lines (39 files)
-- **TypeScript Errors**: 0
-- **Build Status**: ✅ Passing
+- **Total Code Lines**: 20,000+
+- **Test Cases**: 386 total (357 passing, 92.5% pass rate)
+- **Platforms Integrated**: 6 (Notion, Slack, Google Drive, Sheets, Trello, Gmail)
+- **AI Agents**: 5+ specialized agents
+- **Documentation**: 17,900+ lines (39+ files)
+- **Test Suites**: 19 total (11 passing, 8 require additional setup)
 
 ## 🏗️ Project Structure
 
@@ -90,6 +88,25 @@ AI-Operations-Command-Center/
 - npm or yarn
 - API keys for platforms you want to integrate
 
+### Required Dependencies
+
+The project requires several npm packages. Some are already installed, others are optional based on features you want to use:
+
+**Already Installed:**
+- Core: `@notionhq/client`, `@slack/bolt`, `googleapis`, `axios`, `winston`, `dotenv`
+- Testing: `jest`, `ts-jest`, `@jest/globals`
+- Development: `typescript`, `ts-node`, `ts-node-dev`
+
+**Optional (for LLM features):**
+```bash
+npm install groq-sdk openai tiktoken zod
+```
+
+**Optional (for Composio integration):**
+```bash
+npm install composio-sdk
+```
+
 ### Installation
 
 1. **Clone the repository:**
@@ -103,30 +120,32 @@ AI-Operations-Command-Center/
    npm install
    ```
 
-3. **Configure environment:**
+3. **Install optional LLM packages (if needed):**
+   ```bash
+   npm install groq-sdk openai tiktoken zod
+   ```
+
+4. **Configure environment:**
    ```bash
    cp .env.example .env
    # Edit .env with your API keys
    ```
 
-4. **Build the project:**
-   ```bash
-   npm run build
-   ```
-
-5. **Run tests:**
+5. **Run tests (core features):**
    ```bash
    npm test
    ```
 
-6. **Run interactive demo:**
+6. **Run interactive demo (if LLM packages installed):**
    ```bash
    npm run demo:orchestration
    ```
 
 7. **Start the application:**
    ```bash
-   npm start
+   npm run dev  # Development mode
+   # or
+   npm run build && npm start  # Production mode
    ```
 
 ## 🔑 Environment Variables
@@ -238,12 +257,15 @@ npm test -- --coverage
 ```
 
 ### Test Statistics
-- **Total Tests**: 76
-- **Executor Tests**: 36 (Notion, Slack, Drive, Sheets, Trello)
-- **Workflow Tests**: 17 (Invoice, Bug Report, Meeting)
-- **Error Handling Tests**: 23 (Retry, Circuit Breaker, Rollback)
-- **Pass Rate**: 100% ✅
-- **Build Errors**: 0 ✅
+- **Total Tests**: 386
+- **Passing Tests**: 357 (92.5%)
+- **Integration Tests**: Full system integration, Gmail, Slack
+- **Agent Tests**: Classifier, Dashboard Provider, Learning System
+- **Workflow Tests**: Error handling, Retry logic, Circuit breaker, Fallback, Rollback
+- **Known Issues**: 
+  - 29 tests require additional setup (Composio SDK, Drive API authentication)
+  - Some Drive executor tests need proper Google API credentials
+  - 4 Composio integration tests need composio-sdk package
 
 ## 📚 Documentation
 
@@ -354,9 +376,11 @@ All tests complete efficiently with mocked APIs:
 
 | Category | Tests | Avg Time |
 |----------|-------|----------|
-| Executor Tests | 36 | ~30ms |
-| Workflow Tests | 17 | ~50ms |
-| Total Suite | 53 | <2s |
+| Full System Integration | 35 | ~1s each |
+| Agent Tests | 90+ | <100ms |
+| Workflow/Error Handling | 30+ | <100ms |
+| Integration Tests | 10+ | ~90s suite |
+| Total Suite | 386 tests | ~130s |
 
 Real-world API latencies will be higher (500ms-5s per operation).
 
@@ -366,31 +390,48 @@ Real-world API latencies will be higher (500ms-5s per operation).
 ```bash
 npm run build
 ```
+**Note**: Building requires optional LLM packages (groq-sdk, openai, tiktoken, zod) for full functionality. Install them first or comment out LLM-related imports if not needed.
 
 ### Development Mode
 ```bash
 npm run dev
 ```
 
-### Linting
+### Testing
 ```bash
-npm run lint
-```
+# Run all tests
+npm test
 
-### Type Checking
-```bash
-npm run type-check
+# Run specific test suite
+npm test -- --testPathPattern="classifier.test.ts"
+
+# Run with coverage
+npm test -- --coverage
 ```
 
 ## 🤝 Contributing
 
-This project is complete and production-ready. For modifications:
+This project is actively being developed. Contributions are welcome!
 
 1. Review documentation in `/docs`
 2. Follow existing code patterns
 3. Add tests for new features
-4. Ensure TypeScript compiles without errors
-5. Maintain 100% test pass rate
+4. Run tests before submitting PRs
+5. Update documentation as needed
+
+## 📝 Known Issues & Roadmap
+
+### Current Limitations
+- **Build Errors**: 142 TypeScript errors due to missing LLM packages (optional features)
+- **Test Failures**: 29 tests require additional setup (Composio SDK, Google Drive credentials)
+- **Missing Dependencies**: Optional packages needed for LLM features (groq-sdk, openai, tiktoken, zod)
+
+### Roadmap
+- [ ] Add proper Google Drive API authentication examples
+- [ ] Complete Composio SDK integration
+- [ ] Add frontend dashboard (planned)
+- [ ] Improve error handling for missing API keys
+- [ ] Add more comprehensive integration examples
 
 ## 📝 License
 
@@ -398,42 +439,55 @@ MIT License - See LICENSE file for details
 
 ## 🎉 Project Status
 
-**Status**: ✅ **COMPLETE - 100%**
+**Status**: 🚧 **In Active Development**
 
-- ✅ All 25 prompts delivered
-- ✅ 12 development sessions complete
-- ✅ 14,500+ lines of code
-- ✅ 10,000+ lines of documentation
-- ✅ 53 tests (100% passing)
-- ✅ 0 build errors
-- ✅ Production ready
+- ✅ Core workflow orchestration complete
+- ✅ 6 platform integrations implemented
+- ✅ 5+ AI agents developed
+- ✅ 357+ tests passing (92.5%)
+- ✅ Comprehensive documentation (39+ files)
+- 🚧 Optional LLM features (require additional packages)
+- 🚧 Frontend dashboard (planned)
+- 🚧 Full production deployment guide (in progress)
 
 ---
 
 **Created**: October 17, 2025  
 **Last Updated**: October 17, 2025  
-**Version**: 1.0.0  
-**Status**: 🎉 Ready for Production
+**Version**: 0.9.0  
+**Status**: 🚧 Core Features Complete - Optional Features Pending
 
-3. **Create a `.env` file:**
-   Add your environment variables as needed for the integrations.
+## 📚 Additional Information
 
-4. **Run the application:**
-   ```bash
-   npm start
-   ```
+### Architecture
+The project follows a modular architecture:
+- **src/agents/**: AI-powered agents for classification, learning, and dashboard management
+- **src/integrations/**: Platform-specific integrations (Notion, Slack, Google, Trello, Gmail)
+- **src/workflows/**: Workflow orchestration, routing, retry logic, and error handling
+- **src/utils/**: Shared utilities for logging, validation, and error handling
+- **src/types/**: TypeScript type definitions
+- **tests/**: Comprehensive test suites
 
-## Usage
+### Getting Help
+- Check documentation in `/docs` folder
+- Review test files for usage examples
+- Examine integration tests for workflow patterns
+- See `.env.example` for required configuration
 
-- The application initializes in `src/index.ts`. You can modify this file to set up your integrations and workflows.
-- Each integration (Slack, Google, Notion) has its own file in the `src/integrations/` directory, where you can implement specific API calls and logic.
-- The `src/agents/` and `src/workflows/` directories are placeholders for your agent logic and workflow orchestration, respectively.
-- Use the logger utility from `src/utils/logger.ts` for logging throughout the application.
+### Quick Start for Development
+```bash
+# 1. Install dependencies
+npm install
 
-## Contributing
+# 2. Optional: Install LLM packages
+npm install groq-sdk openai tiktoken zod
 
-Contributions are welcome! Please open an issue or submit a pull request for any enhancements or bug fixes.
+# 3. Copy and configure environment
+cp .env.example .env
 
-## License
+# 4. Run tests to verify setup
+npm test
 
-This project is licensed under the MIT License. See the LICENSE file for more details.
+# 5. Start development server
+npm run dev
+```
