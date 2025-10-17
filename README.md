@@ -53,6 +53,9 @@ npm run dev:frontend
 - [docs/ORCHESTRATION.md](docs/ORCHESTRATION.md) - Workflow engine
 - [docs/AUTHENTICATION.md](docs/AUTHENTICATION.md) - API authentication
 
+**📝 Development:**
+- [FRICTION_LOG.md](FRICTION_LOG.md) - Development challenges & lessons learned (80-100 hours)
+
 ---
 
 ## 🎯 Project Overview
